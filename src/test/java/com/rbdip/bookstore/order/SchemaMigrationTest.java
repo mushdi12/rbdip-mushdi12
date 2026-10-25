@@ -36,7 +36,7 @@ class SchemaMigrationTest {
                 Long.class)).isEqualTo(1);
         assertThat(jdbc.queryForObject("SELECT count(*) FROM order_items", Long.class)).isEqualTo(2);
         assertThat(jdbc.queryForMap("""
-                SELECT c.full_name, c.address, c.phone, o.status
+                SELECT concat_ws(' ', c.first_name, c.last_name) AS full_name, c.address, c.phone, o.status
                 FROM orders o JOIN customers c ON c.id = o.customer_id WHERE o.id = 1
                 """))
                 .containsEntry("full_name", "Ivan Petrov")

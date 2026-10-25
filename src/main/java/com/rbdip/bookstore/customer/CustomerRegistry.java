@@ -19,13 +19,16 @@ public class CustomerRegistry {
     }
 
     public Customer findOrCreate(String fullName, String address, String phone) {
-        // Имя само по себе не идентифицирует клиента: учитываем также контакты.
+        // То же разбиение, что и в миграции: не теряем составную фамилию и пробелы.
+        int separator = fullName.indexOf(' ');
+        String firstName = separator < 0 ? fullName : fullName.substring(0, separator);
+        String lastName = separator < 0 ? null : fullName.substring(separator + 1);
         Long id = jdbcTemplate.queryForObject("""
-                INSERT INTO customers (full_name, address, phone) VALUES (?, ?, ?)
-                ON CONFLICT (full_name, address, phone)
-                DO UPDATE SET full_name = EXCLUDED.full_name
+                INSERT INTO customers (first_name, last_name, address, phone) VALUES (?, ?, ?, ?)
+                ON CONFLICT (first_name, last_name, address, phone)
+                DO UPDATE SET first_name = EXCLUDED.first_name
                 RETURNING id
-                """, Long.class, fullName, address, phone);
+                """, Long.class, firstName, lastName, address, phone);
         return entityManager.getReference(Customer.class, id);
     }
 }

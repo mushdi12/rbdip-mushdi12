@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 
@@ -62,6 +64,21 @@ class CustomerNormalizationTest extends AbstractIntegrationTest {
         createOrder(productId, "Moscow", null);
         assertThatThrownBy(() -> jdbcTemplate.update("UPDATE order_items SET product_id = -1"))
                 .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"Madonna", "Anna Maria Sidorova", " Ivan  Petrov ", "Ivan "})
+    void preservesFullNameInApiAfterSplitting(String fullName) {
+        Long productId = createProduct();
+        var created = restTemplate.postForEntity("/orders",
+                new CreateOrderRequest(fullName, "Moscow", null, null, null,
+                        List.of(new CreateOrderRequest.Item(productId, 1))), Map.class);
+        assertThat(created.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        var listed = restTemplate.getForEntity("/orders", List.class);
+        assertThat(listed.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(listed.getBody()).hasSize(1);
+        Map<?, ?> order = (Map<?, ?>) listed.getBody().getFirst();
+        assertThat(order.get("customerFullName")).isEqualTo(fullName);
     }
 
     private Long createProduct() {
