@@ -1,41 +1,33 @@
 package com.rbdip.bookstore.review;
 
-import com.rbdip.bookstore.order.OrderItemRepository;
-import com.rbdip.bookstore.order.OrderRepository;
+import com.rbdip.bookstore.purchase.PurchaseHistory;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 /**
- * Намеренная архитектурная связанность: чтобы проверить, что автор отзыва
- * действительно покупал товар, сервис напрямую лезет во внутренние
- * репозитории пакета order, вместо обращения через выделенный контракт
- * (интерфейс/событие). Это цель для выделения модуля review по Strangler
- * Fig в ЛР4 - после рефакторинга ArchitectureRulesTest (пакет reference)
- * должен зафиксировать отсутствие такой зависимости.
+ * Работает с отзывами, получая сведения о покупках через публичный контракт.
  */
 @Service
 public class ReviewService {
 
-    private final ReviewRepository reviewRepository;
-    private final OrderRepository orderRepository;
-    private final OrderItemRepository orderItemRepository;
+    private static final Logger LOG = LoggerFactory.getLogger(ReviewService.class);
 
-    public ReviewService(
-            ReviewRepository reviewRepository,
-            OrderRepository orderRepository,
-            OrderItemRepository orderItemRepository) {
+    private final ReviewRepository reviewRepository;
+    private final PurchaseHistory purchaseHistory;
+
+    public ReviewService(ReviewRepository reviewRepository, PurchaseHistory purchaseHistory) {
         this.reviewRepository = reviewRepository;
-        this.orderRepository = orderRepository;
-        this.orderItemRepository = orderItemRepository;
+        this.purchaseHistory = purchaseHistory;
     }
 
     public Review addReview(Long productId, String authorName, Integer rating, String comment) {
-        // NB: в текущей "грязной" версии verifiedPurchase не используется дальше,
-        // но сам факт прямого обращения к order-репозиториям отсюда - и есть
-        // намеренная связанность, которую нужно устранить.
-        boolean verifiedPurchase = !orderRepository.findAll().isEmpty()
-                && !orderItemRepository.findAll().isEmpty();
-        Review review = new Review(productId, authorName == null ? "anonymous" : authorName, rating, comment);
+        String author = authorName == null ? "anonymous" : authorName;
+        boolean verifiedPurchase = purchaseHistory.hasPurchased(productId, author);
+        // Как и раньше, отсутствие покупки не запрещает оставлять отзыв.
+        LOG.debug("Отзыв на товар {}: подтверждённая покупка={}", productId, verifiedPurchase);
+        Review review = new Review(productId, author, rating, comment);
         return reviewRepository.save(review);
     }
 
