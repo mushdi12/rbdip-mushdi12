@@ -196,12 +196,21 @@
                 <groupId>org.pitest</groupId>
                 <artifactId>pitest-maven</artifactId>
                 <version>1.17.3</version>
+                <dependencies>
+                    <!-- Поддержка тестов JUnit 5 внутри процесса PIT. -->
+                    <dependency>
+                        <groupId>org.pitest</groupId>
+                        <artifactId>pitest-junit5-plugin</artifactId>
+                        <version>1.2.2</version>
+                    </dependency>
+                </dependencies>
                 <configuration>
                     <targetClasses>
                         <param>com.rbdip.bookstore.order.PricingCalculator</param>
                     </targetClasses>
                     <targetTests>
-                        <param>com.rbdip.bookstore.*</param>
+                        <!-- Мутации калькулятора проверяют только собственные тесты его поведения. -->
+                        <param>com.rbdip.bookstore.order.PricingRegressionTest</param>
                     </targetTests>
                     <mutationThreshold>60</mutationThreshold>
                     <outputFormats>
