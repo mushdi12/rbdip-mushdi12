@@ -137,8 +137,8 @@ class CustomerNameMigrationTest {
             CountDownLatch before = new CountDownLatch(1);
             CountDownLatch after = new CountDownLatch(1);
             AtomicInteger requests = new AtomicInteger();
-            try (var worker = Executors.newSingleThreadExecutor()) {
-                worker.submit(() -> {
+            try (var worker = Executors.newFixedThreadPool(2)) {
+                Runnable requestWorker = () -> {
                     while (running.get()) {
                         try {
                             boolean afterContract = contracted.get();
@@ -151,7 +151,9 @@ class CustomerNameMigrationTest {
                             after.countDown();
                         }
                     }
-                });
+                };
+                worker.submit(requestWorker);
+                worker.submit(requestWorker);
                 try {
                     assertThat(before.await(10, TimeUnit.SECONDS)).isTrue();
                     migration("6").migrate();
