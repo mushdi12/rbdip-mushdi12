@@ -58,7 +58,11 @@ class OrderValidationRegressionTest extends AbstractIntegrationTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         assertThat(jdbcTemplate.queryForObject("SELECT quantity FROM order_items", Integer.class)).isEqualTo(1);
         assertThat(jdbcTemplate.queryForMap(
-                "SELECT customer_full_name, customer_address, customer_phone, status FROM orders"))
+                """
+                SELECT c.full_name AS customer_full_name, c.address AS customer_address,
+                       c.phone AS customer_phone, o.status
+                FROM orders o JOIN customers c ON c.id = o.customer_id
+                """))
                 .containsEntry("customer_full_name", "Ivan")
                 .containsEntry("customer_address", "Moscow")
                 .containsEntry("customer_phone", "+7000")
